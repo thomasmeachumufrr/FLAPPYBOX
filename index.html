@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FLAPPY BOX 1.0</title>
+    <title>FLAPPY BOX 1.0 - ATROPELAR EDITION</title>
     <style>
         body {
             margin: 0;
@@ -215,7 +215,7 @@
         const telaCreditos = document.getElementById("tela-creditos");
         const btnReiniciarFinal = document.getElementById("btn-reiniciar-final");
 
-        // Níveis (Com caracteres Unicode para evitar erro de salvamento)
+        // Níveis
         const dadosNiveis = {
             1: { titulo: "N\u00CDVEL 1", nome: "DJ HERCULANO", cor: "#70c5ce" },
             2: { titulo: "N\u00CDVEL 2", nome: "VICTOR SALGADO", cor: "#f9c74f" },
@@ -245,6 +245,9 @@
         const imgObs3_2 = new Image(); imgObs3_2.src = 'obs3_2.jpg'; 
 
         const imgGuitarra = new Image(); imgGuitarra.src = 'guitarra.png';
+        
+        // NOVA IMAGEM ADICIONADA: CARRO
+        const imgCarro = new Image(); imgCarro.src = 'carro.jpg';
 
         const coresCanosNormais = { 1: "#73bf2e", 2: "#e76f51", 3: "#6c757d" };
 
@@ -284,6 +287,10 @@
                 alvo.destruido = true;
                 let era = getEraAtual();
                 let corExplosao = era === 1 ? "#73bf2e" : (era === 2 ? "#d93838" : "#fff");
+                
+                // Se for atropelar, explosão cinza escuro
+                if (alvo.tipoEspecial === 'atropelar') corExplosao = "#333";
+
                 criarExplosao(alvo.x, alvo.y - 50, corExplosao);
                 criarExplosao(alvo.x, alvo.y + alvo.gap + 50, corExplosao);
 
@@ -291,26 +298,21 @@
                 btnAgredir.style.display = "none";
             }
         }
-// --- FUNÇÃO QUE FALTAVA ---
+
+        // --- FUNÇÃO PARA REINICIAR O JOGO ---
         function resetarJogoTotal() {
-            // Reseta as variáveis principais
             passaro.reset();
             canos.reset();
             placar.reset();
             frames = 0;
             canosGeradosCount = 0;
-            
-            // Reseta progresso de níveis
             passouNivel2 = false;
             passouNivel3 = false;
-
-            // Reseta a mensagem da tela
             msgInicio.innerHTML = "Toque para<br>JOGAR";
             msgInicio.style.display = "block";
-
-            // Define o estado para 'Get Ready' (o pássaro fica flutuando antes de cair)
             estado.atual = estado.getReady;
         }
+
         // --- INPUT ---
         function clique(e) {
             if (e.target.id === 'btn-agredir' || e.target.parentNode.id === 'btn-agredir') {
@@ -335,11 +337,9 @@
             if(e.target.id !== 'btn-agredir') e.preventDefault(); clique(e); 
         }, { passive: false });
         
-        // --- CORREÇÃO DO ESPAÇO AQUI ---
         window.addEventListener("keydown", (e) => { 
-            // Adicionado OR e.key === " " e preventDefault
             if (e.code === "Space" || e.key === " ") {
-                e.preventDefault(); // Impede a rolagem de tela e foca no jogo
+                e.preventDefault(); 
                 clique({target: {id: 'canvas'}});
             }
             if (e.code === "KeyA") tentarAgredir();
@@ -436,12 +436,24 @@
                     if (c.ehEspecial) {
                         let img = c.imagemRef; 
                         if (img && img.complete && img.naturalHeight !== 0) {
+                            // Desenha a parte de cima (Sempre a pessoa)
                             ctx.drawImage(img, c.x, 0, this.largura, c.y);
+                            
                             let by = c.y + c.gap;
-                            ctx.drawImage(img, c.x, by, this.largura, canvas.height - by - chao.altura);
-                            ctx.strokeStyle = c.tipoEspecial === 'ratiar' ? "#9d00ff" : "red";
+                            let h = canvas.height - by - chao.altura;
+
+                            // LOGICA ESPECIAL: Se for Atropelar, desenha o Carro embaixo
+                            if (c.tipoEspecial === 'atropelar' && imgCarro.complete) {
+                                ctx.drawImage(imgCarro, c.x, by, this.largura, h);
+                            } else {
+                                // Caso contrário, desenha a mesma imagem (pessoa) embaixo
+                                ctx.drawImage(img, c.x, by, this.largura, h);
+                            }
+
+                            ctx.strokeStyle = c.tipoEspecial === 'ratiar' ? "#9d00ff" : (c.tipoEspecial === 'atropelar' ? "#FFF" : "red");
                             ctx.lineWidth = 3;
-                            ctx.strokeRect(c.x, 0, this.largura, c.y); ctx.strokeRect(c.x, by, this.largura, canvas.height - by - chao.altura);
+                            ctx.strokeRect(c.x, 0, this.largura, c.y); 
+                            ctx.strokeRect(c.x, by, this.largura, canvas.height - by - chao.altura);
                         } else { ctx.fillStyle = "red"; this.desenhaRetangulos(c); }
                     } else {
                         ctx.fillStyle = coresCanosNormais[c.era] || "#73bf2e"; this.desenhaRetangulos(c);
@@ -458,9 +470,13 @@
                 let especialVivo = this._canos.find(c => c.ehEspecial && !c.destruido && c.x < canvas.width && c.x + this.largura > 0);
                 if (especialVivo && estado.atual === estado.jogo) {
                     btnAgredir.style.display = "flex";
+                    // ALTERAÇÃO DO BOTÃO CONFORME O TIPO
                     if (especialVivo.tipoEspecial === 'ratiar') {
                         btnAgredir.innerHTML = "RATIAR A<br>GUITARRA";
                         btnAgredir.style.backgroundColor = "#800080"; btnAgredir.style.fontSize = "11px";
+                    } else if (especialVivo.tipoEspecial === 'atropelar') {
+                        btnAgredir.innerHTML = "ATROPELAR<br>(A)";
+                        btnAgredir.style.backgroundColor = "#333"; btnAgredir.style.fontSize = "12px";
                     } else {
                         btnAgredir.innerHTML = "AGREDIR<br>(A)";
                         btnAgredir.style.backgroundColor = "#d93838"; btnAgredir.style.fontSize = "13px";
@@ -474,11 +490,19 @@
                     let progressoNaFase = canosGeradosCount % PONTOS_POR_ERA; 
                     if (progressoNaFase === 0) progressoNaFase = PONTOS_POR_ERA;
 
+                    // --- LOGICA DE GERAÇÃO ALTERADA PARA O NÍVEL 3 ---
                     if (progressoNaFase === 3) {
-                        ehEspecial = true; tipo = 'agredir';
-                        if (era === 1) imagemParaUsar = imgObs1_1;
-                        if (era === 2) imagemParaUsar = imgObs2_1;
-                        if (era === 3) imagemParaUsar = imgObs3_1;
+                        ehEspecial = true; 
+                        // Se for Era 3 (André Gaeta) e for o cano nº 15 (primeiro especial dele)
+                        if (era === 3 && canosGeradosCount === 15) {
+                            tipo = 'atropelar'; 
+                            imagemParaUsar = imgObs3_1; // André em cima
+                        } else {
+                            tipo = 'agredir'; 
+                            if (era === 1) imagemParaUsar = imgObs1_1;
+                            if (era === 2) imagemParaUsar = imgObs2_1;
+                            if (era === 3) imagemParaUsar = imgObs3_1;
+                        }
                     } else if (progressoNaFase === 6) {
                         ehEspecial = true;
                         if (era === 1) { tipo = 'ratiar'; imagemParaUsar = imgObs1_2; }
@@ -539,26 +563,17 @@
             reset() { this.score = 0; }
         };
 
-        // --- CONTROLE DE FPS (Adicione estas variáveis antes do loop) ---
+        // --- LOOP PRINCIPAL ---
         let then = Date.now();
         const fps = 60;
         const interval = 1000 / fps;
 
         function loop() {
-            // Agenda o próximo frame nativo (165hz, 144hz, etc)
             requestAnimationFrame(loop);
-
-            // Calcula o tempo que passou
             let now = Date.now();
             let delta = now - then;
-
-            // Só atualiza o jogo se já passou o tempo de 1 frame a 60fps (aprox 16ms)
             if (delta > interval) {
-                
-                // Ajusta o tempo para manter a sincronia
                 then = now - (delta % interval);
-
-                // --- AQUI COMEÇA A LÓGICA ORIGINAL DO SEU JOGO ---
                 
                 let era = getEraAtual();
                 ctx.fillStyle = dadosNiveis[era].cor;
